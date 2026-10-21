@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#367fc5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="時間割">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>6時間授業 時間割</title>
+<style>
+:root{--blue:#367fc5;--line:#dfe8f2;--bg:#f4f8fc;--ink:#172b49}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;padding-bottom:env(safe-area-inset-bottom)}
+header{background:var(--blue);color:white;padding:22px 16px 18px;text-align:center}header h1{font-size:22px;margin:0 0 5px}header p{margin:0;color:#e6f2ff;font-size:13px}
+main{max-width:680px;margin:auto;padding:14px}.days{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;margin:4px 0 16px}
+button,.day{border:0;border-radius:12px;padding:11px 3px;font:inherit;cursor:pointer}.day{background:#e5edf7;color:#27476b;font-size:13px}.day.active{background:var(--blue);color:white}
+h2{font-size:19px;margin:8px 0 12px}.period{display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:center;background:white;border:1px solid var(--line);border-radius:14px;padding:10px;margin:9px 0}.num{height:46px;border-radius:11px;display:grid;place-items:center;font-size:22px;font-weight:700}.p1{background:#fce5dd}.p2{background:#dcebff}.p3{background:#dff3e3}.p4{background:#fff1c7}.p5{background:#eae2ff}.p6{background:#d8f2f2}
+.time{font-size:12px;color:#64748b;margin-bottom:5px}.period input{width:100%;border:1px solid #d8e2ee;border-radius:8px;padding:9px;font:inherit;font-size:16px;color:var(--ink);background:#fff}
+.memo{margin-top:18px;background:#e9f1fb;border-radius:14px;padding:14px}.memo label{display:block;font-weight:700;margin-bottom:8px}.memo textarea{width:100%;min-height:76px;border:1px solid #d4e0ee;border-radius:10px;padding:10px;font:inherit;resize:vertical}
+.actions{display:flex;gap:8px;margin:14px 0}.actions button{flex:1;background:white;border:1px solid #d8e2ee;color:#24486f}.hint{font-size:12px;color:#64748b;line-height:1.5}.toast{font-size:12px;color:#246b45;min-height:18px}
+</style>
+</head>
+<body>
+<header><h1>6時間授業 時間割</h1><p>MY TIMETABLE</p></header>
+<main>
+  <div class="days" id="days"></div>
+  <h2 id="dayTitle">月曜日</h2>
+  <div id="periods"></div>
+  <section class="memo"><label for="memo">📝 宿題・持ち物メモ</label><textarea id="memo" placeholder="例：数学のワーク、英語の教科書"></textarea></section>
+  <div class="actions"><button id="copy">時間割をコピー</button><button id="clear">この曜日をクリア</button></div>
+  <div class="toast" id="toast" aria-live="polite"></div>
+  <p class="hint">入力内容はこのiPhoneのブラウザに自動保存されます。ブラウザのデータを消去すると内容も消える場合があります。</p>
+  <p class="hint">ホーム画面に追加するには、公開されたWebサイトをSafariで開き、共有ボタン →「ホーム画面に追加」を選んでください。</p>
+</main>
+<script>
+const days=["月曜日","火曜日","水曜日","木曜日","金曜日","カセット"];
+const times=["8:50〜9:40","9:50〜10:40","10:50〜11:40","12:40〜13:30","13:40〜14:30","14:40〜15:30"];
+const colors=["p1","p2","p3","p4","p5","p6"];
+const key="six-period-timetable-v1";
+let data={};
+try{data=JSON.parse(localStorage.getItem(key)||"{}")}catch(e){data={}}
+let current=days[0];
+function ensure(day){if(!data[day])data[day]={subjects:["","","","","",""],memo:""};if(!data[day].subjects)data[day].subjects=["","","","","",""];while(data[day].subjects.length<6)data[day].subjects.push("");}
+function save(){localStorage.setItem(key,JSON.stringify(data));document.getElementById("toast").textContent="自動保存しました";}
+function renderDays(){const el=document.getElementById("days");el.innerHTML="";days.forEach(d=>{const b=document.createElement("button");b.className="day"+(d===current?" active":"");b.textContent=d==="カセット"?"カセ":d.slice(0,1);b.title=d;b.setAttribute("aria-label",d);b.onclick=()=>{current=d;render()};el.appendChild(b)})}
+function render(){ensure(current);renderDays();document.getElementById("dayTitle").textContent=current;const el=document.getElementById("periods");el.innerHTML="";
+times.forEach((t,i)=>{const row=document.createElement("div");row.className="period";const num=document.createElement("div");num.className="num "+colors[i];num.textContent=i+1;const right=document.createElement("div");const time=document.createElement("div");time.className="time";time.textContent=t;const input=document.createElement("input");input.placeholder="教科名を入力";input.value=data[current].subjects[i]||"";input.setAttribute("aria-label",(i+1)+"限の教科");input.addEventListener("input",()=>{data[current].subjects[i]=input.value;save()});right.append(time,input);row.append(num,right);el.appendChild(row)});
+const memo=document.getElementById("memo");memo.value=data[current].memo||"";memo.oninput=()=>{data[current].memo=memo.value;save()};document.getElementById("toast").textContent=""}
+document.getElementById("copy").onclick=async()=>{ensure(current);const text=current+"の時間割\n"+times.map((t,i)=>(i+1)+"限 "+t+" "+(data[current].subjects[i]||"未入力")).join("\n")+"\nメモ："+(data[current].memo||"なし");try{await navigator.clipboard.writeText(text);document.getElementById("toast").textContent="時間割をコピーしました"}catch(e){document.getElementById("toast").textContent=text}};
+document.getElementById("clear").onclick=()=>{if(confirm(current+"の時間割とメモを消去しますか？")){data[current]={subjects:["","","","","",""],memo:""};save();render()}};
+if("serviceWorker" in navigator && location.protocol.startsWith("http"))navigator.serviceWorker.register("./sw.js").catch(()=>{});
+render();
+</script>
+</body></html>
